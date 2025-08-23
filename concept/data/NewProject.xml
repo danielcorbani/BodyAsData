@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="NewProject">
+  <screen id="0" name="Main Screen">
+    <scene id="0" name="Default Scene">
+      <media id="0" name="Placeholder" path="none">
+        <corners>
+          <corner0 x="0.0" y="0.0"/>
+          <corner1 x="1.0" y="0.0"/>
+          <corner2 x="1.0" y="1.0"/>
+          <corner3 x="0.0" y="1.0"/>
+        </corners>
+      </media>
+    </scene>
+  </screen>
+  <assignments>
+    <assignment display="0" screen="0"/>
+  </assignments>
+</project>
