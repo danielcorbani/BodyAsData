@@ -7,7 +7,10 @@ import controlP5.*;
 class Project {
   PApplet mainApplet;  //needed for control P5
   String projectName; //Name passed by the user
+  ArrayList<Scene> scenes = new ArrayList<Scene>();
+  int currentScene  = 0;
   ArrayList<Screen> screens = new ArrayList<Screen>();  // Screens containing Scenes / external displays only, UI not included here
+  int currentScreen = 0;
   ArrayList<Rectangle> availableDisplays = new ArrayList<Rectangle>(); // Stores external displays config
   XML config;
   PGraphics2D canvaUI;    // Main PGraphics for UI
@@ -17,19 +20,13 @@ class Project {
 
   ArrayList<String> mediaFiles = new ArrayList<String>();
 
-  //ArrayList<MediaButton> mediaButtons = new ArrayList<MediaButton>();
-  float mediaButtonHeight = 40; // Height of each media button
-  float mediaPanelPadding = 10; // Padding inside panel
-
-  //ArrayList<ScreenButton> screenButtons = new ArrayList<ScreenButton>();
-  //AddScreenButton addScreenBtn;
-  float screenButtonHeight = 25;
-  float screenButtonMargin = 5;
-  int currentScreen = 0;
-  int currentScene  = 0;
 
   ControlP5 cp5;
   Group mediaList, screenList, displaysList, sceneList;
+  float mediaButtonHeight = 40; // Height of each media button
+  float mediaPanelPadding = 10; // Padding inside panel
+  float screenButtonHeight = 25;
+  float screenButtonMargin = 5;
   int screenButtonsArea = 30;
   boolean addSelectScreenBool = false; //to avoid creating a button inside another button
   boolean addSceneBool = false;
@@ -47,6 +44,7 @@ class Project {
   /////// External Displays Management
 
   void initializeDisplays() {
+    println("Initializing Displays...");
     GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
     GraphicsDevice[] devices = ge.getScreenDevices();
     //displayBounds = new Rectangle[devices.length];
@@ -55,6 +53,7 @@ class Project {
     for (int i = 0; i < devices.length; i++) {
       Rectangle bounds = devices[i].getDefaultConfiguration().getBounds();
       if (i == 0) { // initialize UI
+        println("Main display");
         mainWidth = bounds.width;
         mainHeight = bounds.height;
         hx1 = mainWidth/6;
@@ -73,20 +72,31 @@ class Project {
   }
 
   void initXMLconfig() {
+    println("XML config");
     String filename = "data/" + projectName + ".xml";
     File file = new File(sketchPath(filename));
     if (file.exists()) {
       try {
         config = loadXML(filename);
         screens.clear();
-        XML[] screenXMLs = config.getChildren("Screen");
-        println("Loaded Screens: " + screenXMLs.length);
-        for (XML screenXML : screenXMLs) {
+        XML screensParent = config.getChild("Screens");
+        XML[] screensXML = screensParent.getChildren("Screen");
+        println("Loaded Screens: " + screensXML.length);
+        for (XML screenXML : screensXML) {
           //screens.add(new Screen(screenXML.getInt("id")));
           Screen screen = new Screen(screenXML);
-          screens.add(new Screen(screen.screenXML));
+          screens.add(screen);
           XML[] scenes = screenXML.getChildren("Scene");
           println("Loaded Screen number of scenes: " + scenes.length);
+        }
+        XML scenesParent = config.getChild("Scenes");
+        XML[] scenesXML = scenesParent.getChildren("Scene");
+        println("Loaded Scenes: " + scenesXML.length);
+        for (XML sceneXML : scenesXML) {
+          //screens.add(new Screen(screenXML.getInt("id")));
+          Scene scene = new Scene(sceneXML);
+          scenes.add(scene);
+          println("Loaded Screen number of scenes: " + scenes.size());
         }
         println("Loaded existing project: " + projectName);
       }
@@ -94,9 +104,11 @@ class Project {
         println("Error loading project: " + e);
       }
     } else {
-      XML xml = new XML(projectName);
-      xml.setString("name", projectName);
-      saveXML(xml, "data/" + projectName + ".xml");
+      config = new XML(projectName);
+      config.setString("name", projectName);
+      config.addChild("Screens");
+      config.addChild("Scenes");
+      saveXML(config, "data/" + projectName + ".xml");
       println("New Project created: " + projectName);
     }
   }
@@ -108,38 +120,30 @@ class Project {
 
 
   ///// Screen management
-
-  // Create a new screen with default parameters
+  // Create a new screen
   void addNewScreen() {
     int newId = screens.size();
     Screen newScreen = new Screen(newId);
-    screens.add(newScreen); // Default size
-    config.addChild(newScreen.screenXML);
-    saveToFile();
+    screens.add(newScreen); // add to ArrayList
+    XML Screens = config.getChild("Screens");
+    Screens.addChild(newScreen.screenXML); // add to XML
+    saveToFile(); // update XML
     println("Added new screen (ID: " + newId + ")");
     //addSelectScreenButton(newId);  //can't do that in here!!!!!
-    addSelectScreenBool = true;
+    addSelectScreenBool = true; // tell ControlP5 to update next time
   }
 
-  // Create a new screen with default parameters
+  // Create a new scene
   void addNewScene() {
-    int newId = screens.get(currentScreen).scenes.size();
+    int newId = scenes.size();
     println("Adding a new Scene with index " + newId);
     Scene newScene = new Scene(newId);
-    screens.get(currentScreen).addScene(newScene.sceneXML);
-    XML[] screensXML = config.getChildren("Screen");
-    screensXML[currentScreen].addChild(newScene.sceneXML);
+    scenes.add(newScene);
+    XML Scenes = config.getChild("Scenes");
+    Scenes.addChild(newScene.sceneXML); // add to XML
     saveToFile();
     //println("New Scene added to current Screen");
     addSceneBool = true;
-  }
-
-  ///// Control P5 Management
-
-  void initializeButtons() {
-    createAssignDisplayButtons();
-    createScreenButtons();
-    createSceneButtons();
   }
 
   void updateCP5() {
@@ -148,11 +152,16 @@ class Project {
       addSelectScreenBool = false;
     }
     if (addSceneBool) {
-      int index = screens.get(currentScreen).scenes.size();
-      println("Is this the next Scene index? -> " + index);
-      addSelectSceneButton(index);
+      addSelectSceneButton(scenes.size()-1);
       addSceneBool = false;
     }
+  }
+
+  void initializeButtons() {
+    createAssignDisplayButtons();
+    createScreenButtons();
+    createSceneButtons();
+    createMediaButtons();
   }
 
   void createAssignDisplayButtons() {
@@ -274,7 +283,6 @@ class Project {
     }
     );
 
-    ArrayList<Scene> scenes = screens.get(currentScreen).scenes;
     println("Current Screen number of scenes: " + scenes.size());
     for (Scene scene : scenes) {
       //mediaFiles.add(file.getName());
@@ -305,43 +313,47 @@ class Project {
     );
   }
 
-  // Add this method to scan media files
-  void scanMediaFiles() {
-    mediaFiles.clear();
+  void createMediaButtons() {
     mediaList = cp5.addGroup("Media List")
       .setPosition(r, hy1+r)
       .setBackgroundHeight(hy2-hy1-2*r)
       .disableCollapse()
       ;
+
+    for (int i = 0; i< mediaFiles.size(); i++) {
+      String name = mediaFiles.get(i);
+      println("Creating button: " + name);
+      int buttonHeight = 20;
+      int buttonWidth  = hx1-2*r;
+      int buttonY = i*buttonHeight;
+      cp5.addButton(name)
+        .setPosition(0, buttonY)
+        .setSize(buttonWidth, buttonHeight)
+        .setCaptionLabel(name)
+        .setGroup(mediaList)
+        .addCallback(new CallbackListener() {
+        public void controlEvent(CallbackEvent event) {
+          if (event.getAction() == ControlP5.ACTION_RELEASE) {
+            addMedia(name);
+          }
+        }
+      }
+      );
+    }
+  }
+
+  void scanMediaFiles() {
     File dataDir = new File(sketchPath("data"));
 
     if (dataDir.exists() && dataDir.isDirectory()) {
       File[] files = dataDir.listFiles();
+      println("data folder contain: " + files.length + " files");
       for (File file : files) {
         if (isMediaFile(file.getName())) {
           mediaFiles.add(file.getName());
-          int buttonHeight = 20;
-          int buttonWidth  = hx1-2*r;
-          int buttonY = mediaFiles.size()*buttonHeight;
-          cp5.addButton(file.getName())
-            .setPosition(0, buttonY)
-            .setSize(buttonWidth, buttonHeight)
-            .setCaptionLabel(file.getName())
-            .setGroup(mediaList)
-            .addCallback(new CallbackListener() {
-            public void controlEvent(CallbackEvent event) {
-              if (event.getAction() == ControlP5.ACTION_RELEASE) {
-                //println("Bang released: " + event.getController().getName());
-                // Your function call here
-                addMedia(file.getName());
-              }
-            }
-          }
-          );
+          println(file.getName() + " added to mediaFiles");
         }
       }
-
-      //createMediaButtons();
     }
   }
 

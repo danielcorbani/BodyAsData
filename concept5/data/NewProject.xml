@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<NewProject name="NewProject" type="Luna Video Mapping project">
+  <Screens>
+    <Screen id="0"/>
+    <Screen id="1"/>
+    <Screen id="2"/>
+  </Screens>
+  <Scenes>
+    <Scene id="0"/>
+    <Scene id="1"/>
+    <Scene id="2"/>
+    <Scene id="3"/>
+    <Scene id="4"/>
+  </Scenes>
+</NewProject>
