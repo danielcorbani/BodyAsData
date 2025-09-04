@@ -3,6 +3,7 @@ import java.awt.GraphicsDevice;
 import java.awt.Rectangle;
 import processing.opengl.PGraphics2D;
 import controlP5.*;
+import processing.core.PApplet;
 
 class Project {
   PApplet mainApplet;  //needed for control P5
@@ -20,7 +21,6 @@ class Project {
 
   ArrayList<String> mediaFiles = new ArrayList<String>();
 
-
   ControlP5 cp5;
   Group mediaList, screenList, displaysList, sceneList;
   RadioButton screenRadio, sceneRadio;
@@ -31,6 +31,15 @@ class Project {
   int screenButtonsArea = 30;
   boolean addSelectScreenBool = false; //to avoid creating a button inside another button
   boolean addSceneBool = false;
+
+  //Preview are for Screen Panel
+  float previewAreaX, previewAreaY,
+    previewAreaWidth, previewAreaHeight,
+    previewWidth, previewHeight,
+    previewX, previewY;
+
+  ArrayList<MediaItem> currSceneMedias = new ArrayList<MediaItem>();
+  ArrayList<MediaItem> nextSceneMedias = new ArrayList<MediaItem>();
 
   Project(PApplet p, String name) {
     mainApplet = p;
@@ -61,6 +70,10 @@ class Project {
         hy1 = 30;
         hy2 = 2*mainHeight/4;
         r = 10;
+        previewAreaX = hx1 + 20;
+        previewAreaY = hy1 + 20 ;
+        previewAreaWidth = hx2 - hx1 - 40;
+        previewAreaHeight = hy2 - hy1 - 40 - screenButtonsArea; // Room for buttons
         // Create an offscreen buffer matching main screen size
         canvaUI = (PGraphics2D) createGraphics(mainWidth, mainHeight, P2D);
       } else {
@@ -98,9 +111,20 @@ class Project {
   }
 
   void addMedia(String name) {
-    //check active Screen > active Scene
+    //check active screen
+    int w = screens.get(currentScreen).w;
+    int h = screens.get(currentScreen).h;
+    println(w + " , " + h);
     //create MediaItem with the file
+    MediaItem newMedia = new MediaItem(mainApplet, name, currentScene);
+    newMedia.assignToDisplay(screens.get(currentScreen).w,
+      screens.get(currentScreen).h,
+      screens.get(currentScreen).x,
+      screens.get(currentScreen).y,
+      currentScreen);
     //insert MediaItem into the current Scene
+    scenes.get(currentScene).addMedia(newMedia);
+    screens.get(currentScreen).addMedia(newMedia);
     println(name + " added to current Scene");
   }
 
@@ -371,7 +395,14 @@ class Project {
   void selectScene(int index) {
     if (index >= 0 && index < scenes.size()) {
       currentScene = index;
-      println("Scene " + index + " selected");
+      //println("Scene " + index + " selected");
+      for (Scene scene : scenes) {
+        scene.deactivate();
+      }
+      scenes.get(currentScene).activate();
+      for (Screen screen : screens) {
+        screen.currentScene = currentScene;
+      }
     }
   }
 
@@ -405,15 +436,13 @@ class Project {
   }
 
 
-  void render() {
-    for (Screen screen : screens) {
-      screen.render();
-    }
-    for (Scene scene : scenes) {
-      scene.render();
-    }
+  void render(int mousex, int mousey) {
     drawUI();
     updateCP5();
+    scenes.get(currentScene).render();
+    for (Screen screen : screens) {
+      screen.render(mousex, mousey);
+    }
   }
 
   void drawUI() {
@@ -451,16 +480,11 @@ class Project {
     input.rect(x1+r, y1+r, x2-x1-2*r, y2-y1-2*r, r);
   }
 
+
   void drawStagePanel(int index) {
     // 1. Draw panel background
     drawPanel(hx1, hy1, hx2, hy2, canvaUI);
 
-    // 2. Calculate available preview area (with 20px padding)
-
-    float previewAreaX = hx1 + 20;
-    float previewAreaY = hy1 + 20 ;
-    float previewAreaWidth = hx2 - hx1 - 40;
-    float previewAreaHeight = hy2 - hy1 - 40 - screenButtonsArea; // Room for buttons
 
     // 3. Draw preview content
     if (index >= 0 && index < screens.size()) {
@@ -472,21 +496,22 @@ class Project {
         previewAreaHeight / screen.h
         );
 
-      float previewWidth = screen.w * scale;
-      float previewHeight = screen.h * scale;
+      previewWidth = screen.w * scale;
+      previewHeight = screen.h * scale;
 
       // Center in preview area
-      float previewX = previewAreaX + (previewAreaWidth - previewWidth)/2;
-      float previewY = previewAreaY + (previewAreaHeight - previewHeight)/2;
+      previewX = previewAreaX + (previewAreaWidth - previewWidth)/2;
+      previewY = previewAreaY + (previewAreaHeight - previewHeight)/2;
 
       // Draw (with border)
       canvaUI.fill(0);
       canvaUI.rect(previewX-2, previewY-2, previewWidth+4, previewHeight+4);
-      canvaUI.image(screen.pg, previewX, previewY, previewWidth, previewHeight);
-      canvaUI.fill(200,100);
+      canvaUI.image(screen.getScreen(), previewX, previewY, previewWidth, previewHeight);
+      canvaUI.fill(200, 100);
       canvaUI.textSize(48);
       canvaUI.textAlign(CENTER, CENTER);
       canvaUI.text(index, (hx2 + hx1)/2, (hy1 +hy2)/2);
+      //canvaUI.text(previewAreaWidth, (hx2 + hx1)/2, (hy1 +hy2)/2);
     }
 
     // 4. Draw UI elements on top
@@ -494,5 +519,15 @@ class Project {
     canvaUI.textSize(16);
     canvaUI.textAlign(LEFT, TOP);
     canvaUI.text("Stage Preview", hx1 + 20, hy1 + 15);
+  }
+
+  public void moveHoverPoint(float mousex, float mousey) {
+    for (Screen screen : screens) {
+      screen.moveHoverPoint(mousex, mousey);
+    }
+  }
+
+  void keyReleased(char k, int kc) {
+    if (k == 'c') scenes.get(currentScene).toggleCalibration();
   }
 }

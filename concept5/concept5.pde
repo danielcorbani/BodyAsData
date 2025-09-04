@@ -1,4 +1,4 @@
-import paletai.mapping.*;
+//import paletai.mapping.*;
 
 Project project;
 
@@ -9,5 +9,13 @@ void setup() {
 
 void draw() {
   background(0);
-  project.render();
+  project.render(mouseX,mouseY);
+}
+
+void keyReleased() {
+  project.keyReleased(key, keyCode);  // call method on the instance
+}
+
+void mouseDragged() {
+  project.moveHoverPoint(mouseX, mouseY);  // Move hovered point while dragging
 }
