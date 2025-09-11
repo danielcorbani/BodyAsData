@@ -8,6 +8,7 @@ class Scene {
     this.id = id;
     sceneXML = new XML("Scene");
     sceneXML.setInt("id", id);
+    sceneXML.addChild("Medias");
   }
 
   Scene(XML scene) {
@@ -25,7 +26,9 @@ class Scene {
 
   void addMedia(MediaItem newMedia) {
     mediaItems.add(newMedia);
-    println("new Media added successfully");
+    XML mediasXML = sceneXML.getChild("Medias");
+    mediasXML.addChild(newMedia.mediaXML);
+    //println("new Media added successfully");
   }
 
   public void toggleCalibration() {

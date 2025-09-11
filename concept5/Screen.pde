@@ -14,6 +14,7 @@ class Screen {
     unassign();
     screenXML = new XML("Screen");
     screenXML.setInt("id", id);
+    screenXML.addChild("Medias");
     currentScene = 0;
   }
 
@@ -31,6 +32,9 @@ class Screen {
     this.y = 0;
     isAssigned = false;
     pg = (PGraphics2D) createGraphics(w, h, P2D);
+    for (MediaItem media : mediaItems) {
+      media.assignToDisplay(w, h, x, y, id);
+    }
   }
 
   void assignToDisplay(Rectangle bounds) {
@@ -40,11 +44,14 @@ class Screen {
     this.y = bounds.y;
     isAssigned = true;
     pg = (PGraphics2D) createGraphics(w, h, P2D);
+    for (MediaItem media : mediaItems) {
+      media.assignToDisplay(w, h, x, y, id);
+    }
   }
 
   void addMedia(MediaItem newMedia) {
     mediaItems.add(newMedia);
-    println("new Media added successfully");
+    //println("new Media added successfully");
   }
 
   void render(int mousex, int mousey) {
@@ -73,15 +80,14 @@ class Screen {
     }
     pg.endDraw();
   }
+  
+  public void setPreviewArea(float px, float py, float pw, float ph) {
+    for (MediaItem media : mediaItems) {
+        media.setPreviewArea(px, py, pw, ph);
+        //media.moveHoverPoint(mousex, mousey);
+    }
+  }
 
-  //boolean isMouseInsideCorners(PVector mouse, PVector[] cc){
-  //  float minX = Math.min(Math.min(cc[0].x, cc[1].x), Math.min(cc[2].x, cc[3].x));
-  //  float maxX = Math.max(Math.max(cc[0].x, cc[1].x), Math.max(cc[2].x, cc[3].x));
-  //  float minY = Math.min(Math.min(cc[0].y, cc[1].y), Math.min(cc[2].y, cc[3].y));
-  //  float maxY = Math.max(Math.max(cc[0].y, cc[1].y), Math.max(cc[2].y, cc[3].y));
-
-  //  return mouse.x > minX && mouse.x < maxX && mouse.y > minY && mouse.y < maxY;
-  //}
   public void moveHoverPoint(float mousex, float mousey) {
     for (MediaItem media : mediaItems) {
         media.moveHoverPoint(mousex,mousey);

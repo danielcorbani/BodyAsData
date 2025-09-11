@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<NewProject name="NewProject" type="Luna Video Mapping project">
+  <Screens>
+    <Screen id="0"/>
+  </Screens>
+  <Scenes>
+    <Scene id="0">
+      <Medias>
+        <MediaItem Scene="0" Screen="0" id="0" name="mundukuru.mp4">
+          <xyN>
+            <point index="0" x="0.0" y="1.0"/>
+            <point index="1" x="1.0" y="1.0"/>
+            <point index="2" x="1.0" y="0.0"/>
+            <point index="3" x="0.0" y="0.0"/>
+          </xyN>
+          <uvN>
+            <point index="0" x="0.17784087" y="0.83636355"/>
+            <point index="1" x="0.675142" y="0.95227265"/>
+            <point index="2" x="0.7850852" y="0.30454546"/>
+            <point index="3" x="0.08579542" y="0.19090927"/>
+          </uvN>
+          <xyP>
+            <point index="0" x="0.0" y="0.0"/>
+            <point index="1" x="1280.0" y="0.0"/>
+            <point index="2" x="1280.0" y="720.0"/>
+            <point index="3" x="0.0" y="720.0"/>
+          </xyP>
+          <uvP>
+            <point index="0" x="227.63632" y="117.81824"/>
+            <point index="1" x="864.18176" y="34.36369"/>
+            <point index="2" x="1004.90906" y="500.72726"/>
+            <point index="3" x="109.81813" y="582.54535"/>
+          </uvP>
+        </MediaItem>
+      </Medias>
+    </Scene>
+    <Scene id="1">
+      <Medias/>
+    </Scene>
+  </Scenes>
+</NewProject>

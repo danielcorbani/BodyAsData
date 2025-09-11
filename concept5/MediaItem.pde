@@ -3,6 +3,7 @@ import processing.video.Movie;
 import processing.video.Capture;
 
 public class MediaItem {
+  XML mediaXML;
   /** Parent Processing applet */
   private PApplet p;
   /** Full path to media file */
@@ -25,9 +26,8 @@ public class MediaItem {
   private VidMap vidMap; // Homography transformation
   /** Original media dimensions */
   public int mediaWidth, mediaHeight;
-  public int assignedScreen;
+  public int assignedScreen, sceneIndex;
   int resolutionX, resolutionY;
-  int sceneIndex;
   
   /**
    * Constructs a new MediaItem.
@@ -37,15 +37,20 @@ public class MediaItem {
    * @param sceneIndex Identifier for this media instance
    * @throws RuntimeException If media file cannot be loaded
    */
+  
   public MediaItem(PApplet p, String filePath, int sceneIndex) {
-    println("starting MediaItem");
     this.p = p;
     this.filePath = filePath;
-    this.fileName = extractFileName(filePath) + "_scene" + String.valueOf(sceneIndex); // NEED TO CHECK THIS!!!!!
+    this.fileName = extractFileName(filePath); // NEED TO CHECK THIS!!!!!
     this.isVideo = isVideoFile(filePath);
     this.sceneIndex =  sceneIndex;
     this.vidMap = new VidMap(p, fileName); // Pass fileName to VidMap
-    println("Finishing VidMap 2");
+    
+    initVariables();
+    
+    toXML();
+  }
+  void initVariables(){
     if (isVideo) {
       this.movie = new Movie(p, filePath);
       movie.loop(); // Preload the movie (optional)
@@ -65,10 +70,27 @@ public class MediaItem {
         mediaHeight = p.height;
       }
     }
-    println("Loaded file");
-    // Apply aspect ratio correction
-
-    println("finishing MediaItem");;
+  }
+  
+  void toXML() {
+    mediaXML = new XML("MediaItem");
+    mediaXML.setString("name",fileName);
+    //mediaXML.addChild(arrayToXML("xyN", vidMap.xyN));
+    //mediaXML.addChild(arrayToXML("uvN", vidMap.uvN));
+    //mediaXML.addChild(arrayToXML("xyP", vidMap.xyP));
+    //mediaXML.addChild(arrayToXML("uvP", vidMap.uvP));
+  }
+  
+  // Convert a PVector[] into XML
+  XML arrayToXML(String tag, PVector[] arr) {
+    XML arrayXML = new XML(tag);
+    //for (int i = 0; i < arr.length; i++) {
+    //  XML v = arrayXML.addChild("point");
+    //  v.setInt("index", i);
+    //  v.setFloat("x", arr[i].x);
+    //  v.setFloat("y", arr[i].y);
+    //}
+    return arrayXML;
   }
 
   void assignToDisplay(int w, int h, int x, int y, int screenIndex) {
@@ -195,6 +217,10 @@ public class MediaItem {
       thumbnail.resize(150, 100);
     }
   }
+  
+  public void setPreviewArea(float px, float py, float pw, float ph) {
+    vidMap.setPreviewArea(px, py, pw, ph);
+  }
 
   /**
    * Renders the media with homography transformation.
@@ -274,7 +300,7 @@ public class MediaItem {
   public void stopMedia() {
     if (isVideo && movie != null && movie != null) {
       movie.stop();
-      movie.dispose(); // force GStreamer cleanup
+      movie.dispose(); // force GStreamer cleanup. It is crucial to force GStreamer to release the native pipeline before reusing
       movie = null;
       mediaCanvas.beginDraw();
       mediaCanvas.clear();
@@ -308,4 +334,6 @@ public class MediaItem {
   public PGraphics2D getMediaCanvas() {
     return vidMap.getMediaCanvas();
   }
+  
+  
 }

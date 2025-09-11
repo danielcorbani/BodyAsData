@@ -11,11 +11,11 @@ public class VidMap {
   /** Graphics buffers for input and output */
   PGraphics2D pgCanvas, pgInput;
   /** Normalized coordinates for shader (0-1 range) */
-  PVector[] xyN = new PVector[4]; // Normalized coordinates for Shader
-  PVector[] uvN = new PVector[4]; // Normalized coordinates for Shader
+  public PVector[] xyN = new PVector[4]; // Normalized coordinates for Shader
+  public PVector[] uvN = new PVector[4]; // Normalized coordinates for Shader
   /** Pixel coordinates for Processing display */
-  PVector[] xyP = new PVector[4]; // Pixel coordinates for Processing (for drawing)
-  PVector[] uvP = new PVector[4]; // Pixel coordinates for Processing (for drawing)
+  public PVector[] xyP = new PVector[4]; // Pixel coordinates for Processing (for drawing)
+  public PVector[] uvP = new PVector[4]; // Pixel coordinates for Processing (for drawing)
   /** Math utility for homography calculations */
   MathHomography mat;
   /** 3D matrix for shader transformations */
@@ -33,7 +33,10 @@ public class VidMap {
   private boolean movingImage = false;
   private PVector initialMousePos;
   private PVector[] initialCorners;
-  int screenX, screenY;
+  /** Preview area parameters */
+  private float previewX, previewY, previewWidth, previewHeight;
+  private boolean hasPreview = false;
+
   /**
    * Constructs a new VidMap instance.
    *
@@ -41,31 +44,37 @@ public class VidMap {
    * @param name Unique identifier for this mapping
    */
   public VidMap(PApplet p, String name) {
-    println("starting VidMap");
+    //println("starting VidMap");
     this.p = p;
     this.objectName = name;
     mapInOut = p.loadShader("homography.glsl");
-    assignToDisplay(1280, 720,0,0);
+    assignToDisplay(1280, 720, 0, 0);
     mat = new MathHomography();
     //resetHomography();
-    println("Finishing VidMap");
+    //println("Finishing VidMap");
   }
 
   void assignToDisplay(int w, int h, int x, int y) {
-    
+
     this.resolutionX = w;
     this.resolutionY = h;
-    screenX = x;
-    screenY = y;
-    println("screen position in VidMap: " + screenX + "," + screenY);
     pgCanvas = (PGraphics2D) p.createGraphics(resolutionX, resolutionY, PConstants.P2D);
     pgInput = (PGraphics2D) p.createGraphics(resolutionX, resolutionY, PConstants.P2D);
     //resetHomography();
     mapInOut.set("resolution", resolutionX, resolutionY);
   }
+  
+
+  public void setPreviewArea(float px, float py, float pw, float ph) {
+    this.previewX = px;
+    this.previewY = py;
+    this.previewWidth = pw;
+    this.previewHeight = ph;
+    this.hasPreview = true;
+  }
 
   void assignToDisplay(PGraphics2D pgScreen, int x, int y) {
-    assignToDisplay(pgScreen.width, pgScreen.height,x,y);
+    assignToDisplay(pgScreen.width, pgScreen.height, x, y);
   }
 
 
@@ -161,120 +170,79 @@ public class VidMap {
     }
   }
 
-  /**
-   * Renders the mapped content to the screen.
-   *
-   * @param input The graphics buffer to transform and display
-   */
-  public void show(PGraphics2D input) {
-    if (pgCanvas == null) {
-      System.out.println("Initializing pgCanvas late...");
-      pgCanvas = (PGraphics2D) p.createGraphics(resolutionX, resolutionY, PConstants.P2D);
-    }
-    pgCanvas.beginDraw();
-    pgCanvas.image(input, 0, 0, pgCanvas.width, pgCanvas.height);
-
-    if (calibrate) {
-      // Draw the green grid inside pgCanvas
-      makeGrid(xyP, checkInput);
-    }
-
-    pgCanvas.endDraw();
-
-    if (!checkInput)
-      pgCanvas.filter(mapInOut);
-    p.image(pgCanvas, 0, 0);
-
-    if (calibrate) {
-
-      if (!checkInput) {
-        // Highlight the corners on the main canvas
-        p.beginShape();
-        p.stroke(0, 255, 0);
-        p.strokeWeight(2);
-        p.noFill();
-        for (int i = 0; i < uvN.length; i++) {
-          if (i == hoverPoint) {
-            p.fill(255, 0, 0); // Highlight hovered point
-            p.ellipse(p.width * uvN[i].x + screenX, p.height * (1 - uvN[i].y) + screenY, 10, 10);
-            p.noFill();
-          }
-          p.vertex(p.width * uvN[i].x, p.height * (1 - uvN[i].y));
-        }
-        p.endShape(PConstants.CLOSE);
-      } else {
-        // Highlight the corners on the main canvas
-        p.beginShape();
-        p.stroke(0, 0, 255);
-        p.strokeWeight(2);
-        p.noFill();
-        for (int i = 0; i < uvN.length; i++) {
-          if (i == hoverPoint) {
-            p.fill(255, 0, 0); // Highlight hovered point
-            p.ellipse(p.width * xyN[i].x + screenX, p.height * (1 - xyN[i].y) + screenY, 10, 10);
-            p.noFill();
-          }
-          p.vertex(p.width * xyN[i].x + screenX, p.height * (1 - xyN[i].y) + screenY);
-        }
-        p.endShape(PConstants.CLOSE);
-      }
-    }
-  }
-
   public void render(PGraphics2D input) {
     if (pgCanvas == null) {
-      System.out.println("Initializing pgCanvas late...");
+      //System.out.println("Initializing pgCanvas late...");
       pgCanvas = (PGraphics2D) p.createGraphics(resolutionX, resolutionY, PConstants.P2D);
     }
     pgCanvas.beginDraw();
     pgCanvas.image(input, 0, 0, pgCanvas.width, pgCanvas.height);
 
     if (calibrate) {
-      // Draw the green grid inside pgCanvas
-      makeGrid(xyP, checkInput);
+      makeGrid(xyP, checkInput); // Draw the green grid inside pgCanvas
     }
-
     pgCanvas.endDraw();
 
     if (!checkInput) {
       pgCanvas.filter(mapInOut);
     }
-    //p.image(pgCanvas, 0, 0);
 
-    if (calibrate) {
-
-      if (!checkInput) {
-        // Highlight the corners on the main canvas
-        p.beginShape();
-        p.stroke(0, 255, 0);
-        p.strokeWeight(2);
-        p.noFill();
-        for (int i = 0; i < uvN.length; i++) {
-          if (i == hoverPoint) {
-            p.fill(255, 0, 0); // Highlight hovered point
-            p.ellipse(pgCanvas.width * uvN[i].x, pgCanvas.height * (1 - uvN[i].y), 10, 10);
-            p.noFill();
-          }
-          p.vertex(pgCanvas.width * uvN[i].x, pgCanvas.height * (1 - uvN[i].y));
-        }
-        p.endShape(PConstants.CLOSE);
-      } else {
-        // Highlight the corners on the main canvas
-        p.beginShape();
-        p.stroke(0, 0, 255);
-        p.strokeWeight(2);
-        p.noFill();
-        for (int i = 0; i < uvN.length; i++) {
-          if (i == hoverPoint) {
-            p.fill(255, 0, 0); // Highlight hovered point
-            p.ellipse(pgCanvas.width * xyN[i].x , pgCanvas.height * (1 - xyN[i].y), 10, 10);
-            p.noFill();
-          }
-          p.vertex(pgCanvas.width * xyN[i].x, pgCanvas.height * (1 - xyN[i].y));
-        }
-        p.endShape(PConstants.CLOSE);
-      }
+    if (calibrate && hasPreview) {
+      drawCalibrationOnPreview();
     }
+  }
+
+  private void drawCalibrationOnPreview() {
+    if (!checkInput) {
+      // Draw output calibration (uvN points) on preview
+      p.beginShape();
+      p.stroke(0, 255, 0);
+      p.strokeWeight(2);
+      p.noFill();
+      for (int i = 0; i < uvN.length; i++) {
+        PVector previewPoint = normalizedToPreview(uvN[i]);
+        if (i == hoverPoint) {
+          p.fill(255, 0, 0);
+          p.ellipse(previewPoint.x, previewPoint.y, 10, 10);
+          p.noFill();
+        }
+        p.vertex(previewPoint.x, previewPoint.y);
+      }
+      p.endShape(PConstants.CLOSE);
+    } else {
+      // Draw input calibration (xyN points) on preview
+      p.beginShape();
+      p.stroke(0, 0, 255);
+      p.strokeWeight(2);
+      p.noFill();
+      for (int i = 0; i < xyN.length; i++) {
+        PVector previewPoint = normalizedToPreview(xyN[i]);
+        if (i == hoverPoint) {
+          p.fill(255, 0, 0);
+          p.ellipse(previewPoint.x, previewPoint.y, 10, 10);
+          p.noFill();
+        }
+        p.vertex(previewPoint.x, previewPoint.y);
+      }
+      p.endShape(PConstants.CLOSE);
+    }
+  }
+
+  private PVector normalizedToPreview(PVector normalized) {
+    float x = previewX + normalized.x * previewWidth;
+    float y = previewY + (1 - normalized.y) * previewHeight; // Invert Y for preview
+    return new PVector(x, y);
+  }
+
+  private PVector previewToNormalized(PVector previewPoint) {
+    float x = (previewPoint.x - previewX) / previewWidth;
+    float y = 1 - ((previewPoint.y - previewY) / previewHeight); // Invert Y conversion
+    return new PVector(x, y);
+  }
+
+  private PVector previewToPixel(PVector previewPoint) {
+    PVector normalized = previewToNormalized(previewPoint);
+    return Nornal2Pixel(normalized);
   }
 
   //public void show(PImage input) {
@@ -307,25 +275,6 @@ public class VidMap {
     return new PVector(in.x / pgCanvas.width, 1.0f - (in.y / pgCanvas.height)); // Normalize and invert Y-axis for shader
   }
 
-  /**
-   * Converts pixel coordinates to pixel in the Preview.
-   *
-   * @param in Input point in pixel coordinates
-   * @return Point in pixel coordinates meant for the Preview in the main window
-   */
-  //public PVector Pixel2Preview(PVector in, PVector op, float wp, float hp) {
-  //  return new PVector(op.x + wp*in.x / pgCanvas.width, op.y + hp*in.y / pgCanvas.height);
-  //}
-
-  /**
-   * Converts pixel in the Preview to pixel coordinates.
-   *
-   * @param in Input point in pixel coordinates from the Preview in the main window
-   * @return Point in pixel coordinates
-   */
-  //public PVector Preview2Pixel(PVector in, PVector op, float wp, float hp) {
-  //  return new PVector(pgCanvas.width*(in.x-op.x)/wp, pgCanvas.height*(in.y-op.y)/hp);
-  //}
 
   /**
    * Converts normalized coordinates back to pixel space.
@@ -355,49 +304,6 @@ public class VidMap {
     System.out.println("calibrate " + objectName + "= " + calibrate);
   }
 
-  /**
-   * Checks if mouse is hovering over control points.
-   *
-   * @param x Mouse x position
-   * @param y Mouse y position
-   */
-  public void checkHover(float mousex, float mousey) {
-    PVector offset = new PVector(screenX,screenY);
-    PVector mouse = new PVector(mousex, mousey); // Use Processing coordinates for checking hover
-    //mouse.sub(offset);
-    hoverPoint = -1; // Reset hover point
-    movingImage = false;
-
-    if (calibrate) {
-      if (!checkInput) {
-        for (int i = 0; i < uvP.length; i++) {
-          float dist = PVector.dist(mouse, uvP[i]);
-          if (dist < 10) { // Set hover if within a certain distance threshold
-            hoverPoint = i;
-            break;
-          }
-        }
-        // Check if clicking inside the image
-        if (isMouseInsideImage(mouse, uvP)) {
-          movingImage = true;
-          initialMousePos = new PVector(mouse.x, mouse.y);
-          initialCorners = new PVector[4];
-          for (int i = 0; i < 4; i++) {
-            initialCorners[i] = uvP[i].copy(); // Store initial corners
-          }
-        }
-      } else {
-        for (int i = 0; i < xyP.length; i++) {
-          float dist = PVector.dist(mouse, xyP[i]);
-          if (dist < 10) { // Set hover if within a certain distance threshold
-            hoverPoint = i;
-            break;
-          }
-        }
-      }
-    }
-  }
-
   // Helper method to check if mouse is inside the quadrilateral formed by uvP[]
   private boolean isMouseInsideImage(PVector mouse, PVector[] cc) {
     float minX = Math.min(Math.min(cc[0].x, cc[1].x), Math.min(cc[2].x, cc[3].x));
@@ -408,38 +314,106 @@ public class VidMap {
     return mouse.x > minX && mouse.x < maxX && mouse.y > minY && mouse.y < maxY;
   }
 
-  /**
-   * Move control points.
-   *
-   * @param x Mouse x position
-   * @param y Mouse y position
-   */
-  public void moveHoverPoint(float x, float y) {
-    if (!checkInput) {
-      if (hoverPoint != -1) {
-        uvP[hoverPoint] = new PVector(x, y); // Update in Processing coordinates
-        uvN[hoverPoint] = Pixel2Nornal(uvP[hoverPoint]); // Convert to normalized coordinates for the shader
-        updateHomography(xyN, uvN);
-      } else if (movingImage) {
-        PVector delta = new PVector(x - initialMousePos.x, y - initialMousePos.y);
-        for (int i = 0; i < 4; i++) {
-          uvP[i] = PVector.add(initialCorners[i], delta);
-          uvN[i] = Pixel2Nornal(uvP[i]);
+  public void checkHover(float mousex, float mousey) {
+    PVector mouse = new PVector(mousex, mousey);
+    hoverPoint = -1;
+    movingImage = false;
+
+    if (calibrate && hasPreview) {
+      // Check if mouse is within preview area
+      if (mousex >= previewX && mousex <= previewX + previewWidth &&
+        mousey >= previewY && mousey <= previewY + previewHeight) {
+
+        if (!checkInput) {
+          // Check corners in preview space
+          for (int i = 0; i < uvN.length; i++) {
+            PVector previewPoint = normalizedToPreview(uvN[i]);
+            float dist = PVector.dist(mouse, previewPoint);
+            if (dist < 10) {
+              hoverPoint = i;
+              break;
+            }
+          }
+          // Check if clicking inside the image in preview
+          PVector[] previewCorners = new PVector[4];
+          for (int i = 0; i < 4; i++) {
+            previewCorners[i] = normalizedToPreview(uvN[i]);
+          }
+          if (isMouseInsideImage(mouse, previewCorners)) {
+            movingImage = true;
+            initialMousePos = new PVector(mouse.x, mouse.y);
+            initialCorners = new PVector[4];
+            for (int i = 0; i < 4; i++) {
+              initialCorners[i] = uvP[i].copy();
+            }
+          }
+        } else {
+          // Similar logic for input mode
+          for (int i = 0; i < xyN.length; i++) {
+            PVector previewPoint = normalizedToPreview(xyN[i]);
+            float dist = PVector.dist(mouse, previewPoint);
+            if (dist < 10) {
+              hoverPoint = i;
+              break;
+            }
+          }
+          PVector[] previewCorners = new PVector[4];
+          for (int i = 0; i < 4; i++) {
+            previewCorners[i] = normalizedToPreview(xyN[i]);
+          }
+          if (isMouseInsideImage(mouse, previewCorners)) {
+            movingImage = true;
+            initialMousePos = new PVector(mouse.x, mouse.y);
+            initialCorners = new PVector[4];
+            for (int i = 0; i < 4; i++) {
+              initialCorners[i] = xyP[i].copy();
+            }
+          }
         }
-        updateHomography(xyN, uvN);
       }
-    } else {
-      if (hoverPoint != -1) {
-        xyP[hoverPoint] = new PVector(x, y); // Update in Processing coordinates
-        xyN[hoverPoint] = Pixel2Nornal(xyP[hoverPoint]); // Convert to normalized coordinates for the shader
-        updateHomography(xyN, uvN);
-      } else if (movingImage) {
-        PVector delta = new PVector(x - initialMousePos.x, y - initialMousePos.y);
-        for (int i = 0; i < 4; i++) {
-          xyP[i] = PVector.add(initialCorners[i], delta);
-          xyN[i] = Pixel2Nornal(xyP[i]);
+    }
+  }
+
+  public void moveHoverPoint(float x, float y) {
+    if (calibrate && hasPreview) {
+      PVector mouse = new PVector(x, y);
+
+      if (!checkInput) {
+        if (hoverPoint != -1) {
+          // Convert preview coordinates back to pixel coordinates
+          PVector pixelPoint = previewToPixel(mouse);
+          uvP[hoverPoint] = pixelPoint;
+          uvN[hoverPoint] = Pixel2Nornal(uvP[hoverPoint]);
+          updateHomography(xyN, uvN);
+        } else if (movingImage) {
+          PVector delta = new PVector(x - initialMousePos.x, y - initialMousePos.y);
+          for (int i = 0; i < 4; i++) {
+            PVector initialPreview = normalizedToPreview(Pixel2Nornal(initialCorners[i]));
+            PVector newPreview = PVector.add(initialPreview, delta);
+            PVector newPixel = previewToPixel(newPreview);
+            uvP[i] = newPixel;
+            uvN[i] = Pixel2Nornal(uvP[i]);
+          }
+          updateHomography(xyN, uvN);
         }
-        updateHomography(xyN, uvN);
+      } else {
+        // Similar logic for input mode
+        if (hoverPoint != -1) {
+          PVector pixelPoint = previewToPixel(mouse);
+          xyP[hoverPoint] = pixelPoint;
+          xyN[hoverPoint] = Pixel2Nornal(xyP[hoverPoint]);
+          updateHomography(xyN, uvN);
+        } else if (movingImage) {
+          PVector delta = new PVector(x - initialMousePos.x, y - initialMousePos.y);
+          for (int i = 0; i < 4; i++) {
+            PVector initialPreview = normalizedToPreview(Pixel2Nornal(initialCorners[i]));
+            PVector newPreview = PVector.add(initialPreview, delta);
+            PVector newPixel = previewToPixel(newPreview);
+            xyP[i] = newPixel;
+            xyN[i] = Pixel2Nornal(xyP[i]);
+          }
+          updateHomography(xyN, uvN);
+        }
       }
     }
   }

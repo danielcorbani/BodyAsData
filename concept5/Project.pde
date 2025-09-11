@@ -110,23 +110,6 @@ class Project {
     return false;
   }
 
-  void addMedia(String name) {
-    //check active screen
-    int w = screens.get(currentScreen).w;
-    int h = screens.get(currentScreen).h;
-    println(w + " , " + h);
-    //create MediaItem with the file
-    MediaItem newMedia = new MediaItem(mainApplet, name, currentScene);
-    newMedia.assignToDisplay(screens.get(currentScreen).w,
-      screens.get(currentScreen).h,
-      screens.get(currentScreen).x,
-      screens.get(currentScreen).y,
-      currentScreen);
-    //insert MediaItem into the current Scene
-    scenes.get(currentScene).addMedia(newMedia);
-    screens.get(currentScreen).addMedia(newMedia);
-    println(name + " added to current Scene");
-  }
 
   /////// Initilize from XML file
   void initXMLconfig() {
@@ -139,20 +122,28 @@ class Project {
         screens.clear();
         XML screensParent = config.getChild("Screens");
         XML[] screensXML = screensParent.getChildren("Screen");
-        //println("Loaded Screens: " + screensXML.length);
         for (XML screenXML : screensXML) {
           Screen screen = new Screen(screenXML);
           screens.add(screen);
-          //XML[] scenes = screenXML.getChildren("Scene");
-          //println("Loaded Screen number of scenes: " + scenes.length);
         }
         XML scenesParent = config.getChild("Scenes");
         XML[] scenesXML = scenesParent.getChildren("Scene");
-        //println("Loaded Scenes: " + scenesXML.length);
         for (XML sceneXML : scenesXML) {
           Scene scene = new Scene(sceneXML);
+          //XML mediasParent = sceneXML.getChild("Medias");
+          //XML[] mediasXML = mediasParent.getChildren("MediaItem");
+          //for (XML mediaXML : mediasXML) {
+          //  try {
+          //    MediaItem newMedia = new MediaItem(mainApplet, mediaXML.getString("name"), scene.id);
+          //    scene.addMedia(newMedia);
+          //    screens.get(newMedia.assignedScreen).addMedia(newMedia);
+          //    println("added " + mediaXML.getString("name") + "to Scene " + scene.id + "and Screen " + newMedia.assignedScreen); 
+          //  }
+          //  catch (Exception e) {
+          //    println("Error loading media: " + e);
+          //  }
+          //}
           scenes.add(scene);
-          //println("Loaded Screen number of scenes: " + scenes.size());
         }
         println("Loaded existing project: " + projectName);
       }
@@ -164,7 +155,11 @@ class Project {
       config.setString("name", projectName);
       config.setString("type", "Luna Video Mapping project");  // May be used to check if the existing XML file waas created here
       config.addChild("Screens");
+      addNewScreen();
+      addSelectScreenBool = false; //avoids duplicated button on initialization
       config.addChild("Scenes");
+      addNewScene();
+      addSceneBool = false; //avoids duplicated button on initialization
       saveXML(config, "data/" + projectName + ".xml");
       println("New Project created: " + projectName);
     }
@@ -185,8 +180,6 @@ class Project {
     XML Screens = config.getChild("Screens");
     Screens.addChild(newScreen.screenXML); // add to XML
     saveToFile(); // update XML
-    //println("Added new screen (ID: " + newId + ")");
-    //addSelectScreenButton(newId);  //can't do that in here!!!!!
     addSelectScreenBool = true; // tell ControlP5 to update next time
   }
 
@@ -202,6 +195,22 @@ class Project {
     //println("New Scene added to current Screen");
     addSceneBool = true;
   }
+
+  void addMedia(String name) {
+    //create MediaItem with the file
+    MediaItem newMedia = new MediaItem(mainApplet, name, currentScene);
+    newMedia.assignToDisplay(screens.get(currentScreen).w,
+      screens.get(currentScreen).h,
+      screens.get(currentScreen).x,
+      screens.get(currentScreen).y,
+      currentScreen);
+    //insert MediaItem into the current Scene
+    scenes.get(currentScene).addMedia(newMedia);
+    screens.get(currentScreen).addMedia(newMedia);
+    saveToFile();
+    //println(name + " added to current Scene");
+  }
+
 
   // This functions updates all buttons
   void updateCP5() {
@@ -318,7 +327,7 @@ class Project {
     t.addCallback(new CallbackListener() {
       public void controlEvent(CallbackEvent ev) {
         if (ev.getAction() == ControlP5.ACTION_RELEASE && t.getState()) {
-          //println("Screen " + index + " selected");
+          //println("Screen " + index + " " + t.getState());
           selectScreen(index);
         }
       }
@@ -480,6 +489,21 @@ class Project {
     input.rect(x1+r, y1+r, x2-x1-2*r, y2-y1-2*r, r);
   }
 
+  void updatePreviewArea() {
+    // Calculate scale to fit
+    float scale = min(
+      previewAreaWidth / screens.get(currentScreen).w,
+      previewAreaHeight / screens.get(currentScreen).h
+      );
+
+    previewWidth = screens.get(currentScreen).w * scale;
+    previewHeight = screens.get(currentScreen).h * scale;
+
+    // Center in preview area
+    previewX = previewAreaX + (previewAreaWidth - previewWidth)/2;
+    previewY = previewAreaY + (previewAreaHeight - previewHeight)/2;
+  }
+
 
   void drawStagePanel(int index) {
     // 1. Draw panel background
@@ -489,20 +513,8 @@ class Project {
     // 3. Draw preview content
     if (index >= 0 && index < screens.size()) {
       Screen screen = screens.get(index);
-
-      // Calculate scale to fit
-      float scale = min(
-        previewAreaWidth / screen.w,
-        previewAreaHeight / screen.h
-        );
-
-      previewWidth = screen.w * scale;
-      previewHeight = screen.h * scale;
-
-      // Center in preview area
-      previewX = previewAreaX + (previewAreaWidth - previewWidth)/2;
-      previewY = previewAreaY + (previewAreaHeight - previewHeight)/2;
-
+      updatePreviewArea();
+      screens.get(currentScreen).setPreviewArea(previewX, previewY, previewWidth, previewHeight);
       // Draw (with border)
       canvaUI.fill(0);
       canvaUI.rect(previewX-2, previewY-2, previewWidth+4, previewHeight+4);
